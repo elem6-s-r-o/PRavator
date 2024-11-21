@@ -1,0 +1,22 @@
+# Příklad konfigurace pro objekt Account
+record_types:
+  - Customer
+  - Partner
+  - Supplier
+
+fields:
+  read:
+    - Name
+    - Description
+    - Industry
+    - Type
+    - Website
+    - Phone
+    - BillingAddress
+    - ShippingAddress
+  edit:
+    - Status
+    - Rating
+    - AnnualRevenue
+    - NumberOfEmployees
+    - AccountSource
