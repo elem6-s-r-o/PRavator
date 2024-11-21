@@ -1,53 +1,53 @@
 # PRavator
 
-PRavator je Python nástroj pro správu oprávnění Salesforce objektů. Umožňuje automatické vytváření permission setů a nastavování oprávnění pro pole objektů s podporou různých úrovní přístupu.
+PRavator is a Python tool for managing Salesforce object permissions. It enables automatic creation of permission sets and setting permissions for object fields with support for different access levels.
 
-## Funkce
+## Features
 
-- Vytváření základních a editačních permission setů
-- Nastavování oprávnění pro čtení a úpravu polí
-- Podpora pro standardní i custom objekty
-- Konfigurace pomocí YAML souborů
-- Detailní logování pomocí elem6-logger
-- CLI rozhraní pro flexibilní použití
+- Creation of basic and edit permission sets
+- Setting read and edit permissions for fields
+- Support for standard and custom objects
+- Configuration using YAML files
+- Detailed logging using elem6-logger
+- CLI interface for flexible usage
 
-## Instalace
+## Installation
 
-1. Naklonujte repozitář:
+1. Clone the repository:
 ```bash
 git clone https://github.com/your-username/PRavator.git
 cd PRavator
 ```
 
-2. Vytvořte a aktivujte virtuální prostředí:
+2. Create and activate virtual environment:
 ```bash
 python -m venv venv
-source venv/bin/activate  # Pro Linux/Mac
-# nebo
-.\venv\Scripts\activate  # Pro Windows
+source venv/bin/activate  # For Linux/Mac
+# or
+.\venv\Scripts\activate  # For Windows
 ```
 
-3. Nainstalujte závislosti:
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Nainstalujte pre-commit hooks:
+4. Install pre-commit hooks:
 ```bash
 pre-commit install
 ```
 
-## Konfigurace
+## Configuration
 
-1. Vytvořte soubor `.env` s vašimi Salesforce přihlašovacími údaji:
+1. Create a `.env` file with your Salesforce credentials:
 ```env
 SF_USERNAME=your_salesforce_username@example.com
 SF_PASSWORD=your_salesforce_password
 SF_SECURITY_TOKEN=your_salesforce_security_token
-SF_DOMAIN=test.salesforce.com  # nebo login.salesforce.com pro produkci
+SF_DOMAIN=test.salesforce.com  # or login.salesforce.com for production
 ```
 
-2. Pro každý objekt vytvořte konfigurační YAML soubor v adresáři `config/`. Například `config/Account.yaml`:
+2. Create a configuration YAML file for each object in the `config/` directory. For example `config/Account.yaml`:
 ```yaml
 record_types:
   - Customer
@@ -67,38 +67,38 @@ restricted_fields:
   - SystemModstamp
 ```
 
-## Použití
+## Usage
 
-PRavator nabízí několik možností spuštění:
+PRavator offers several execution options:
 
-1. Zpracování všech objektů:
+1. Process all objects:
 ```bash
 python src/main.py --all
 ```
 
-2. Zpracování všech custom objektů:
+2. Process all custom objects:
 ```bash
 python src/main.py --custom-all
 ```
 
-3. Zpracování konkrétních objektů:
+3. Process specific objects:
 ```bash
 python src/main.py --objects Account Contact Custom__c
 ```
 
-## Testování
+## Testing
 
-Spuštění testů:
+Run tests:
 ```bash
 python -m pytest tests/
 ```
 
-Spuštění testů s pokrytím:
+Run tests with coverage:
 ```bash
 python -m pytest tests/ --cov=src
 ```
 
-## Struktura projektu
+## Project Structure
 
 ```
 PRavator/
@@ -119,38 +119,38 @@ PRavator/
 └── CHANGELOG.md
 ```
 
-## Funkce v detailu
+## Detailed Functions
 
 ### Salesforce Utils
 
-- `connect_to_salesforce`: Připojení k Salesforce instanci
-- `create_permission_set`: Vytvoření permission setu pro objekt a record type
-- `set_field_permissions`: Nastavení oprávnění pro pole objektu
-- `create_edit_permission_set`: Vytvoření editačního permission setu
+- `connect_to_salesforce`: Connect to Salesforce instance
+- `create_permission_set`: Create permission set for object and record type
+- `set_field_permissions`: Set permissions for object fields
+- `create_edit_permission_set`: Create edit permission set
 
 ### Main
 
-- Zpracování argumentů příkazové řádky
-- Načítání konfigurace z YAML souborů
-- Získávání seznamu objektů ze Salesforce
-- Nastavování oprávnění podle konfigurace
+- Command line argument processing
+- Loading configuration from YAML files
+- Getting list of objects from Salesforce
+- Setting permissions according to configuration
 
-## Logování
+## Logging
 
-Projekt používá elem6-logger pro detailní logování všech operací. Logy obsahují:
-- Informace o připojení k Salesforce
-- Vytváření permission setů
-- Nastavování oprávnění pro pole
-- Chyby a výjimky
+The project uses elem6-logger for detailed operation logging. Logs include:
+- Salesforce connection information
+- Permission set creation
+- Field permission settings
+- Errors and exceptions
 
-## Přispívání
+## Contributing
 
-1. Fork repozitáře
-2. Vytvoření feature branche (`git checkout -b feature/NovaFunkce`)
-3. Commit změn (`git commit -m 'Přidána nová funkce'`)
-4. Push do branche (`git push origin feature/NovaFunkce`)
-5. Otevření Pull Requestu
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/NewFeature`)
+3. Commit your changes (`git commit -m 'Add new feature'`)
+4. Push to the branch (`git push origin feature/NewFeature`)
+5. Open a Pull Request
 
-## Licence
+## License
 
-Distribuováno pod MIT licencí. Viz `LICENSE` soubor pro více informací.
+Distributed under the MIT License. See `LICENSE` file for more information.

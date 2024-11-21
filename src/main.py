@@ -32,18 +32,18 @@ def load_config(object_name: str) -> Dict[str, Any]:
     """
     try:
         config_path = f"config/{object_name}.yaml"
-        logger.info(f"Načítání konfigurace z {config_path}")
+        logger.info(f"Loading configuration from {config_path}")
 
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-        logger.debug(f"Konfigurace úspěšně načtena: {config}")
+        logger.debug(f"Configuration successfully loaded: {config}")
         return config
     except FileNotFoundError:
-        logger.error(f"Konfigurační soubor {config_path} nenalezen")
+        logger.error(f"Configuration file {config_path} not found")
         raise
     except yaml.YAMLError as e:
-        logger.error(f"Chyba při načítání YAML souboru: {str(e)}")
+        logger.error(f"Error loading YAML file: {str(e)}")
         raise
 
 
@@ -61,13 +61,13 @@ def get_all_objects(sf) -> List[str]:
         Exception: If retrieving objects fails
     """
     try:
-        logger.info("Získávání seznamu všech objektů")
+        logger.info("Getting list of all objects")
         describe = sf.describe()
         objects = [obj["name"] for obj in describe["sobjects"]]
-        logger.info(f"Nalezeno {len(objects)} objektů")
+        logger.info(f"Found {len(objects)} objects")
         return objects
     except Exception as e:
-        logger.error(f"Chyba při získávání seznamu objektů: {str(e)}")
+        logger.error(f"Error getting list of objects: {str(e)}")
         raise
 
 
@@ -85,13 +85,13 @@ def get_custom_objects(sf) -> List[str]:
         Exception: If retrieving custom objects fails
     """
     try:
-        logger.info("Získávání seznamu custom objektů")
+        logger.info("Getting list of custom objects")
         describe = sf.describe()
         objects = [obj["name"] for obj in describe["sobjects"] if obj["custom"]]
-        logger.info(f"Nalezeno {len(objects)} custom objektů")
+        logger.info(f"Found {len(objects)} custom objects")
         return objects
     except Exception as e:
-        logger.error(f"Chyba při získávání seznamu custom objektů: {str(e)}")
+        logger.error(f"Error getting list of custom objects: {str(e)}")
         raise
 
 
@@ -108,30 +108,30 @@ def setup_permissions(sf, object_name: str, config: Dict[str, Any]) -> None:
         Exception: If setting up permissions fails
     """
     try:
-        logger.info(f"Nastavování oprávnění pro objekt {object_name}")
+        logger.info(f"Setting up permissions for object {object_name}")
 
-        # Vytvoření základního permission setu
+        # Create basic permission set
         basic_ps_id = create_permission_set(sf, object_name, "basic")
 
-        # Vytvoření edit permission setu
+        # Create edit permission set
         edit_ps_id = create_edit_permission_set(sf, object_name)
 
-        # Nastavení oprávnění pro pole podle konfigurace
+        # Set field permissions according to configuration
         fields = config.get("fields", {})
 
-        # Nastavení read oprávnění
+        # Set read permissions
         if "read" in fields:
             set_field_permissions(sf, basic_ps_id, object_name, fields["read"], "read")
             set_field_permissions(sf, edit_ps_id, object_name, fields["read"], "read")
 
-        # Nastavení edit oprávnění
+        # Set edit permissions
         if "edit" in fields:
             set_field_permissions(sf, edit_ps_id, object_name, fields["edit"], "edit")
 
-        logger.info(f"Oprávnění pro objekt {object_name} úspěšně nastavena")
+        logger.info(f"Permissions for object {object_name} successfully set")
 
     except Exception as e:
-        logger.error(f"Chyba při nastavování oprávnění pro objekt {object_name}: {str(e)}")
+        logger.error(f"Error setting permissions for object {object_name}: {str(e)}")
         raise
 
 
@@ -148,12 +148,12 @@ def process_objects(sf, objects: List[str]) -> None:
     """
     for object_name in objects:
         try:
-            logger.info(f"Zpracovávání objektu {object_name}")
+            logger.info(f"Processing object {object_name}")
             config = load_config(object_name)
             setup_permissions(sf, object_name, config)
-            logger.info(f"Objekt {object_name} úspěšně zpracován")
+            logger.info(f"Object {object_name} successfully processed")
         except Exception as e:
-            logger.error(f"Chyba při zpracování objektu {object_name}: {str(e)}")
+            logger.error(f"Error processing object {object_name}: {str(e)}")
             continue
 
 
@@ -163,19 +163,19 @@ def main():
     Supports processing all objects, all custom objects, or specific objects.
     """
     parser = argparse.ArgumentParser(description="PRavator: Salesforce Permission Manager")
-    parser.add_argument("-a", "--all", action="store_true", help="Zpracovat všechny objekty")
+    parser.add_argument("-a", "--all", action="store_true", help="Process all objects")
     parser.add_argument(
-        "-ca", "--custom-all", action="store_true", help="Zpracovat všechny custom objekty"
+        "-ca", "--custom-all", action="store_true", help="Process all custom objects"
     )
-    parser.add_argument("-o", "--objects", nargs="+", help="Konkrétní objekty ke zpracování")
+    parser.add_argument("-o", "--objects", nargs="+", help="Specific objects to process")
 
     args = parser.parse_args()
 
     try:
-        # Načtení proměnných prostředí
+        # Load environment variables
         load_dotenv()
 
-        # Připojení k Salesforce
+        # Connect to Salesforce
         sf = connect_to_salesforce(
             os.getenv("SF_USERNAME"),
             os.getenv("SF_PASSWORD"),
@@ -183,7 +183,7 @@ def main():
             os.getenv("SF_DOMAIN"),
         )
 
-        # Určení objektů ke zpracování
+        # Determine objects to process
         if args.all:
             objects = get_all_objects(sf)
         elif args.custom_all:
@@ -191,17 +191,17 @@ def main():
         elif args.objects:
             objects = args.objects
         else:
-            logger.error("Nebyl specifikován žádný objekt ke zpracování")
+            logger.error("No objects specified for processing")
             parser.print_help()
             return
 
-        # Zpracování objektů
+        # Process objects
         process_objects(sf, objects)
 
-        logger.info("Program úspěšně dokončen")
+        logger.info("Program successfully completed")
 
     except Exception as e:
-        logger.error(f"Kritická chyba programu: {str(e)}")
+        logger.error(f"Critical program error: {str(e)}")
         raise
 
 

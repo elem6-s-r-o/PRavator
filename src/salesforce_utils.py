@@ -23,14 +23,14 @@ def connect_to_salesforce(
         Exception: If connection fails
     """
     try:
-        logger.info(f"Připojování k Salesforce s uživatelem {username}")
+        logger.info(f"Connecting to Salesforce with user {username}")
         sf = Salesforce(
             username=username, password=password, security_token=security_token, domain=domain
         )
-        logger.info("Úspěšně připojeno k Salesforce")
+        logger.info("Successfully connected to Salesforce")
         return sf
     except Exception as e:
-        logger.error(f"Chyba při připojování k Salesforce: {str(e)}")
+        logger.error(f"Error connecting to Salesforce: {str(e)}")
         raise
 
 
@@ -51,24 +51,24 @@ def create_permission_set(sf: Salesforce, object_name: str, record_type: str) ->
     """
     try:
         permission_set_name = f"{object_name}_{record_type}_Permissions"
-        logger.info(f"Vytváření permission setu {permission_set_name}")
+        logger.info(f"Creating permission set {permission_set_name}")
 
         result = sf.PermissionSet.create(
             {
                 "Name": permission_set_name,
                 "Label": f"{object_name} {record_type} Permissions",
-                "Description": f"Permission set pro {object_name} s record typem {record_type}",
+                "Description": f"Permission set for {object_name} with record type {record_type}",
             }
         )
 
         if result.get("success"):
-            logger.info(f"Permission set {permission_set_name} úspěšně vytvořen")
+            logger.info(f"Permission set {permission_set_name} successfully created")
             return result.get("id")
         else:
-            raise Exception(f"Nepodařilo se vytvořit permission set: {result.get('errors')}")
+            raise Exception(f"Failed to create permission set: {result.get('errors')}")
 
     except Exception as e:
-        logger.error(f"Chyba při vytváření permission setu: {str(e)}")
+        logger.error(f"Error creating permission set: {str(e)}")
         raise
 
 
@@ -97,7 +97,7 @@ def set_field_permissions(
         raise ValueError("access_level must be either 'read' or 'edit'")
 
     try:
-        logger.info(f"Nastavování oprávnění pro {len(fields)} polí v objektu {object_name}")
+        logger.info(f"Setting permissions for {len(fields)} fields in object {object_name}")
 
         for field in fields:
             field_permission = {
@@ -110,16 +110,16 @@ def set_field_permissions(
             result = sf.FieldPermissions.create(field_permission)
 
             if result.get("success"):
-                logger.debug(f"Oprávnění pro pole {field} úspěšně nastaveno")
+                logger.debug(f"Permissions for field {field} successfully set")
             else:
                 raise Exception(
-                    f"Nepodařilo se nastavit oprávnění pro pole {field}: {result.get('errors')}"
+                    f"Failed to set permissions for field {field}: {result.get('errors')}"
                 )
 
-        logger.info(f"Oprávnění pro všechna pole úspěšně nastavena")
+        logger.info(f"Permissions for all fields successfully set")
 
     except Exception as e:
-        logger.error(f"Chyba při nastavování oprávnění: {str(e)}")
+        logger.error(f"Error setting permissions: {str(e)}")
         raise
 
 

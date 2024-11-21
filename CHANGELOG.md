@@ -1,43 +1,43 @@
 # Changelog
 
-Všechny významné změny v projektu budou dokumentovány v tomto souboru.
+All notable changes to this project will be documented in this file.
 
-Formát je založen na [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-a tento projekt dodržuje [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.1.0] - 2024-03-19
 
-### Přidáno
-- Nová funkce `create_edit_permission_set` pro vytváření editačních permission setů
-- Podpora pro restricted_fields v konfiguraci
-- Vylepšené logování pomocí elem6-logger
-- Pre-commit hooks pro kontrolu kódu
-- Rozšířená konfigurace pro Account objekt
+### Added
+- New function `create_edit_permission_set` for creating edit permission sets
+- Support for restricted_fields in configuration
+- Enhanced logging using elem6-logger
+- Pre-commit hooks for code checking
+- Extended configuration for Account object
 
-### Změněno
-- Přepracovaná struktura projektu pro lepší modularitu
-- Vylepšené zpracování chyb a výjimek
-- Aktualizovaná dokumentace v README.md
-- Optimalizované testy s lepším pokrytím
+### Changed
+- Restructured project for better modularity
+- Improved error and exception handling
+- Updated documentation in README.md
+- Optimized tests with better coverage
 
-### Opraveno
-- Správné zpracování chyb při vytváření permission setů
-- Validace access_level v set_field_permissions
+### Fixed
+- Proper error handling when creating permission sets
+- Validation of access_level in set_field_permissions
 
 ## [1.0.0] - 2024-03-19
 
-### Přidáno
-- Základní funkcionalita pro správu Salesforce oprávnění
-- Vytváření permission setů pro objekty a record typy
-- Nastavování oprávnění pro čtení a úpravu polí
-- Podpora pro standardní i custom objekty
-- Konfigurace pomocí YAML souborů
-- Detailní logování
-- Unit testy
-- Dokumentace v README.md
+### Added
+- Basic functionality for Salesforce permission management
+- Creation of permission sets for objects and record types
+- Setting read and edit permissions for fields
+- Support for standard and custom objects
+- Configuration using YAML files
+- Detailed logging
+- Unit tests
+- Documentation in README.md
 
-### Technické detaily
-- Implementace hlavních funkcí v `src/main.py` a `src/salesforce_utils.py`
-- Kompletní sada unit testů v `tests/`
-- Konfigurace pomocí `.env` souboru
-- Závislosti spravované přes `requirements.txt`
+### Technical Details
+- Implementation of main functions in `src/main.py` and `src/salesforce_utils.py`
+- Complete set of unit tests in `tests/`
+- Configuration using `.env` file
+- Dependencies managed through `requirements.txt`
