@@ -6,4 +6,4 @@ black==24.2.0
 isort==5.13.2
 pre-commit==3.6.0
 pyyaml==6.0.1
-elem6_logger @ git+https://${GH_PAT}@github.com/elem6-s-r-o/elem6-logger.git
+elem6_logger @ git+https://github.com/elem6-s-r-o/elem6-logger.git
