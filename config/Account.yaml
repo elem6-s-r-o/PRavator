@@ -1,4 +1,4 @@
-# Příklad konfigurace pro objekt Account
+# Configuration for Account object permissions
 record_types:
   - Customer
   - Partner
@@ -14,9 +14,44 @@ fields:
     - Phone
     - BillingAddress
     - ShippingAddress
-  edit:
-    - Status
-    - Rating
+    - AccountNumber
+    - Site
+    - AccountSource
     - AnnualRevenue
     - NumberOfEmployees
+    - Ownership
+    - TickerSymbol
+    - Rating
+    - ParentId
+    - CreatedDate
+    - LastModifiedDate
+
+  edit:
+    - Name
+    - Description
+    - Industry
+    - Type
+    - Website
+    - Phone
+    - BillingStreet
+    - BillingCity
+    - BillingState
+    - BillingPostalCode
+    - BillingCountry
+    - ShippingStreet
+    - ShippingCity
+    - ShippingState
+    - ShippingPostalCode
+    - ShippingCountry
     - AccountSource
+    - AnnualRevenue
+    - NumberOfEmployees
+    - Rating
+
+restricted_fields:
+  - OwnerId
+  - SystemModstamp
+  - LastActivityDate
+  - Jigsaw
+  - JigsawCompanyId
+  - CleanStatus
