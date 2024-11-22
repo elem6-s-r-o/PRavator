@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
@@ -6,10 +7,14 @@ import yaml
 from dotenv import load_dotenv
 from elem6_logger import Elem6Logger
 
-try:
-    from src.salesforce_manager import sfdc_manager
-except ImportError:
-    from salesforce_manager import sfdc_manager
+from src.salesforce_manager import sfdc_manager
+
+# Set up logging levels
+LOGGING_LEVELS = {
+    0: logging.WARNING,  # Default
+    1: logging.INFO,  # -v
+    2: logging.DEBUG,  # -vv
+}
 
 logger = Elem6Logger.get_logger(__name__)
 
@@ -198,89 +203,6 @@ def get_custom_objects(sf) -> List[str]:
         raise
 
 
-def create_permission_set(sf, object_name: str, permission_type: str) -> str:
-    """
-    Create a permission set for a Salesforce object.
-
-    Args:
-        sf: Authenticated Salesforce instance
-        object_name (str): Name of the Salesforce object
-        permission_type (str): Type of permission set (e.g., 'basic', 'edit')
-
-    Returns:
-        str: ID of the created permission set
-
-    Raises:
-        Exception: If permission set creation fails
-    """
-    try:
-        permission_set_name = f"{object_name}_{permission_type}"
-
-        # Check if permission set already exists
-        existing_ps = get_permission_set(sf, permission_set_name)
-        if existing_ps:
-            logger.info(f"Permission set {permission_set_name} already exists")
-            return existing_ps["Id"]
-
-        logger.info(f"Creating permission set {permission_set_name}")
-
-        result = sf.PermissionSet.create(
-            {
-                "Name": permission_set_name,
-                "Label": f"{object_name} {permission_type} Permissions",
-                "Description": f"Permission set for {object_name}",
-            }
-        )
-
-        if result.get("success"):
-            logger.info(f"Permission set {permission_set_name} created successfully")
-            return result.get("id")
-        else:
-            raise Exception(f"Failed to create permission set: {result.get('errors')}")
-
-    except Exception as e:
-        logger.error(f"Error creating permission set: {str(e)}")
-        raise
-
-
-def set_field_permissions(sf, permission_set_id: str, object_name: str, fields: List[str]) -> None:
-    """
-    Set field permissions for a permission set.
-
-    Args:
-        sf: Authenticated Salesforce instance
-        permission_set_id (str): ID of the permission set
-        object_name (str): Name of the Salesforce object
-        fields (List[str]): List of fields to set permissions for
-
-    Raises:
-        Exception: If setting field permissions fails
-    """
-    try:
-        logger.info(f"Setting field permissions for {len(fields)} fields")
-
-        for field in fields:
-            field_permission = {
-                "Field": f"{object_name}.{field}",
-                "PermissionsRead": True,
-                "PermissionsEdit": False,
-                "ParentId": permission_set_id,
-            }
-
-            result = sf.FieldPermissions.create(field_permission)
-
-            if result.get("success"):
-                logger.debug(f"Field permission set for {field}")
-            else:
-                raise Exception(f"Failed to set field permission: {result.get('errors')}")
-
-        logger.info("Field permissions set successfully")
-
-    except Exception as e:
-        logger.error(f"Error setting field permissions: {str(e)}")
-        raise
-
-
 def process_objects(
     sf, objects: List[str], verbose: bool = False, create_template: bool = False
 ) -> None:
@@ -314,7 +236,7 @@ def process_objects(
             config = load_config(object_name)
 
             # Create basic permission set
-            permission_set_id = create_permission_set(sf, object_name, "basic")
+            permission_set_id = sfdc_manager.create_permission_set(object_name, "basic")
 
             # Set field permissions
             allowed_fields = [
@@ -322,7 +244,7 @@ def process_objects(
                 for field in config.get("fields", [])
                 if field not in config.get("restricted_fields", [])
             ]
-            set_field_permissions(sf, permission_set_id, object_name, allowed_fields)
+            sfdc_manager.set_field_permissions(permission_set_id, object_name, allowed_fields)
 
             if verbose:
                 # Show object details
@@ -353,7 +275,12 @@ def main():
         "-ca", "--custom-all", action="store_true", help="Process all custom objects"
     )
     parser.add_argument("-o", "--objects", nargs="+", help="Specific objects to process")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed information")
+    parser.add_argument(
+        "-v", "--verbose", action="count", default=0, help="Increase verbosity level (-v, -vv)"
+    )
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging (equivalent to -vv)"
+    )
     parser.add_argument(
         "-t",
         "--create-template",
@@ -364,6 +291,12 @@ def main():
     args = parser.parse_args()
 
     try:
+        # Set logging level based on verbosity
+        if args.debug:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(LOGGING_LEVELS.get(args.verbose, logging.DEBUG))
+
         # Load environment variables
         load_dotenv()
 
@@ -386,7 +319,7 @@ def main():
                 return
 
             # Process objects
-            process_objects(sf, objects, args.verbose, args.create_template)
+            process_objects(sf, objects, args.verbose > 0 or args.debug, args.create_template)
 
             logger.info("Program successfully completed")
 
