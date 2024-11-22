@@ -1,0 +1,31 @@
+# Configuration for Order6__c object permissions
+fields:
+  - Name
+  - OrderNum__c
+  - Type__c
+  - First_Name__c
+  - Last_Name__c
+  - Full_Name__c
+  - Email__c
+  - Phone__c
+  - AddressStreet__c
+  - AddressCity__c
+  - AddressPostalCode__c
+  - AddressCountry__c
+  - TotalPrice__c
+  - CurrencyIsoCode
+  - Stage__c
+  - IsUnpaid__c
+  - Payment_OK__c
+  - IsConfirmed__c
+  - IsCancelled__c
+
+restricted_fields:
+  - OwnerId
+  - SystemModstamp
+  - LastActivityDate
+  - CreatedDate
+  - CreatedById
+  - LastModifiedDate
+  - LastModifiedById
+  - IsDeleted
