@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +11,13 @@ try:
     from src.salesforce_manager import sfdc_manager
 except ImportError:
     from salesforce_manager import sfdc_manager
+
+# Set up logging levels
+LOGGING_LEVELS = {
+    0: logging.WARNING,  # Default
+    1: logging.INFO,     # -v
+    2: logging.DEBUG,    # -vv
+}
 
 logger = Elem6Logger.get_logger(__name__)
 
@@ -353,7 +361,14 @@ def main():
         "-ca", "--custom-all", action="store_true", help="Process all custom objects"
     )
     parser.add_argument("-o", "--objects", nargs="+", help="Specific objects to process")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed information")
+    parser.add_argument(
+        "-v", "--verbose", action="count", default=0,
+        help="Increase verbosity level (-v, -vv)"
+    )
+    parser.add_argument(
+        "-d", "--debug", action="store_true",
+        help="Enable debug logging (equivalent to -vv)"
+    )
     parser.add_argument(
         "-t",
         "--create-template",
@@ -364,6 +379,12 @@ def main():
     args = parser.parse_args()
 
     try:
+        # Set logging level based on verbosity
+        if args.debug:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(LOGGING_LEVELS.get(args.verbose, logging.DEBUG))
+
         # Load environment variables
         load_dotenv()
 
@@ -386,7 +407,7 @@ def main():
                 return
 
             # Process objects
-            process_objects(sf, objects, args.verbose, args.create_template)
+            process_objects(sf, objects, args.verbose > 0 or args.debug, args.create_template)
 
             logger.info("Program successfully completed")
 
