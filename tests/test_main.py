@@ -3,62 +3,84 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.main import (
-    get_all_objects,
-    get_custom_objects,
-    load_config,
-    main,
-    process_objects,
-    setup_permissions,
-)
+
+@pytest.fixture
+def mock_modules():
+    mock_loader = MagicMock()
+    mock_templates = MagicMock()
+    mock_sfdc_manager = MagicMock()
+    mock_sfdc_manager.connect.return_value.__enter__.return_value = MagicMock()
+    mock_sfdc_manager.connect.return_value.__exit__.return_value = None
+    mock_sfdc_manager.get_api_usage.return_value = (100, 200)  # (remaining, max_requests)
+
+    with patch("src.main.load_config", mock_loader), patch(
+        "src.main.create_config_template", mock_templates
+    ), patch("src.main.sfdc_manager", mock_sfdc_manager):
+        yield {
+            "loader": mock_loader,
+            "templates": mock_templates,
+            "sfdc_manager": mock_sfdc_manager,
+        }
 
 
 class TestMain:
-    @pytest.fixture
-    def mock_sf(self):
-        mock = MagicMock()
-        mock.describe.return_value = {"sobjects": [{"name": "Account"}, {"name": "Contact"}]}
-        return mock
+    def test_get_all_objects_success(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.describe.return_value = {
+            "sobjects": [{"name": "Account"}, {"name": "Contact"}]
+        }
 
-    def test_get_all_objects_success(self, mock_sf):
-        result = get_all_objects(mock_sf)
+        from src.main import get_all_objects
+
+        result = get_all_objects()
         assert result == ["Account", "Contact"]
-        mock_sf.describe.assert_called_once()
+        mock_connection.describe.assert_called_once()
 
-    def test_get_all_objects_failure(self, mock_sf):
-        mock_sf.describe.side_effect = Exception("API Error")
+    def test_get_all_objects_failure(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.describe.side_effect = Exception("API Error")
+
+        from src.main import get_all_objects
+
         with pytest.raises(Exception) as exc_info:
-            get_all_objects(mock_sf)
+            get_all_objects()
         assert str(exc_info.value) == "API Error"
 
-    def test_get_custom_objects_success(self, mock_sf):
-        mock_sf.describe.return_value = {
+    def test_get_custom_objects_success(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.describe.return_value = {
             "sobjects": [
                 {"name": "Account", "custom": False},
                 {"name": "Custom__c", "custom": True},
             ]
         }
-        result = get_custom_objects(mock_sf)
-        assert result == ["Custom__c"]
-        mock_sf.describe.assert_called_once()
 
-    def test_get_custom_objects_failure(self, mock_sf):
-        mock_sf.describe.side_effect = Exception("API Error")
+        from src.main import get_custom_objects
+
+        result = get_custom_objects()
+        assert result == ["Custom__c"]
+        mock_connection.describe.assert_called_once()
+
+    def test_get_custom_objects_failure(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.describe.side_effect = Exception("API Error")
+
+        from src.main import get_custom_objects
+
         with pytest.raises(Exception) as exc_info:
-            get_custom_objects(mock_sf)
+            get_custom_objects()
         assert str(exc_info.value) == "API Error"
 
-    def test_load_config_success(self, tmp_path):
+    def test_load_object_config_success(self, mock_modules, tmp_path):
         config_dir = tmp_path / "config"
         config_dir.mkdir()
-        config_file = config_dir.parent / "config" / "Account.yaml"
+        config_file = config_dir / "Account.yaml"
         config_file.write_text(
-            """# Configuration for Account object permissions
+            """
 record_types:
   - Customer
   - Partner
   - Supplier
-
 fields:
   read:
     - Name
@@ -80,7 +102,6 @@ fields:
     - ParentId
     - CreatedDate
     - LastModifiedDate
-
   edit:
     - Name
     - Description
@@ -102,174 +123,199 @@ fields:
     - AnnualRevenue
     - NumberOfEmployees
     - Rating
-
 restricted_fields:
   - OwnerId
   - SystemModstamp
   - LastActivityDate
   - Jigsaw
   - JigsawCompanyId
-  - CleanStatus"""
+  - CleanStatus
+"""
         )
 
-        with patch("src.main.os.getcwd", return_value=str(tmp_path)):
-            result = load_config("Account")
-            expected = {
-                "record_types": ["Customer", "Partner", "Supplier"],
-                "fields": {
-                    "read": [
-                        "Name",
-                        "Description",
-                        "Industry",
-                        "Type",
-                        "Website",
-                        "Phone",
-                        "BillingAddress",
-                        "ShippingAddress",
-                        "AccountNumber",
-                        "Site",
-                        "AccountSource",
-                        "AnnualRevenue",
-                        "NumberOfEmployees",
-                        "Ownership",
-                        "TickerSymbol",
-                        "Rating",
-                        "ParentId",
-                        "CreatedDate",
-                        "LastModifiedDate",
-                    ],
-                    "edit": [
-                        "Name",
-                        "Description",
-                        "Industry",
-                        "Type",
-                        "Website",
-                        "Phone",
-                        "BillingStreet",
-                        "BillingCity",
-                        "BillingState",
-                        "BillingPostalCode",
-                        "BillingCountry",
-                        "ShippingStreet",
-                        "ShippingCity",
-                        "ShippingState",
-                        "ShippingPostalCode",
-                        "ShippingCountry",
-                        "AccountSource",
-                        "AnnualRevenue",
-                        "NumberOfEmployees",
-                        "Rating",
-                    ],
-                },
-                "restricted_fields": [
-                    "OwnerId",
-                    "SystemModstamp",
-                    "LastActivityDate",
-                    "Jigsaw",
-                    "JigsawCompanyId",
-                    "CleanStatus",
+        expected_config = {
+            "record_types": ["Customer", "Partner", "Supplier"],
+            "fields": {
+                "read": [
+                    "Name",
+                    "Description",
+                    "Industry",
+                    "Type",
+                    "Website",
+                    "Phone",
+                    "BillingAddress",
+                    "ShippingAddress",
+                    "AccountNumber",
+                    "Site",
+                    "AccountSource",
+                    "AnnualRevenue",
+                    "NumberOfEmployees",
+                    "Ownership",
+                    "TickerSymbol",
+                    "Rating",
+                    "ParentId",
+                    "CreatedDate",
+                    "LastModifiedDate",
                 ],
-            }
-            assert result == expected
+                "edit": [
+                    "Name",
+                    "Description",
+                    "Industry",
+                    "Type",
+                    "Website",
+                    "Phone",
+                    "BillingStreet",
+                    "BillingCity",
+                    "BillingState",
+                    "BillingPostalCode",
+                    "BillingCountry",
+                    "ShippingStreet",
+                    "ShippingCity",
+                    "ShippingState",
+                    "ShippingPostalCode",
+                    "ShippingCountry",
+                    "AccountSource",
+                    "AnnualRevenue",
+                    "NumberOfEmployees",
+                    "Rating",
+                ],
+            },
+            "restricted_fields": [
+                "OwnerId",
+                "SystemModstamp",
+                "LastActivityDate",
+                "Jigsaw",
+                "JigsawCompanyId",
+                "CleanStatus",
+            ],
+        }
 
-    def test_load_config_file_not_found(self):
+        mock_modules["loader"].return_value = expected_config
+        with patch("src.main.os.getcwd", return_value=str(tmp_path)):
+            from src.main import load_object_config
+
+            result = load_object_config("Account")
+            assert result == expected_config
+
+    def test_load_object_config_file_not_found(self, mock_modules):
+        from src.main import load_object_config
+
         with pytest.raises(FileNotFoundError):
-            load_config("NonExistentObject")
+            load_object_config("NonExistentObject")
 
-    def test_load_config_invalid_yaml(self, tmp_path):
+    def test_load_object_config_invalid_yaml(self, mock_modules, tmp_path):
         config_dir = tmp_path / "config"
         config_dir.mkdir()
-        config_file = config_dir.parent / "config" / "Invalid.yaml"
+        config_file = config_dir / "Invalid.yaml"
         config_file.write_text("invalid: yaml: content:")
 
+        mock_modules["loader"].side_effect = Exception("Invalid YAML")
         with patch("src.main.os.getcwd", return_value=str(tmp_path)):
+            from src.main import load_object_config
+
             with pytest.raises(Exception):
-                load_config("Invalid")
+                load_object_config("Invalid")
 
-    def test_setup_permissions_success(self, mock_sf):
-        config = {
-            "fields": {
-                "read": ["Name", "Description"],
-                "edit": ["Status"],
-            }
-        }
-        mock_sf.PermissionSet.create.return_value = {"success": True, "id": "123"}
-        mock_sf.FieldPermissions.create.return_value = {"success": True}
+    def test_setup_permissions_success(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.PermissionSet.create.return_value = {"success": True, "id": "123"}
+        mock_connection.FieldPermissions.create.return_value = {"success": True}
 
-        setup_permissions(mock_sf, "Account", config)
+        config = {"fields": {"read": ["Name", "Description"], "edit": ["Status"]}}
 
-        assert mock_sf.PermissionSet.create.call_count == 2
-        assert mock_sf.FieldPermissions.create.call_count >= 3
+        from src.main import setup_permissions
 
-    def test_setup_permissions_failure(self, mock_sf):
-        config = {
-            "fields": {
-                "read": ["Name"],
-                "edit": ["Status"],
-            }
-        }
-        mock_sf.PermissionSet.create.side_effect = Exception("Permission Set Error")
+        setup_permissions(mock_connection, "Account", config)
+        assert mock_connection.PermissionSet.create.call_count == 2
+        assert mock_connection.FieldPermissions.create.call_count >= 3
+
+    def test_setup_permissions_failure(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.PermissionSet.create.side_effect = Exception("Permission Set Error")
+
+        config = {"fields": {"read": ["Name"], "edit": ["Status"]}}
+
+        from src.main import setup_permissions
 
         with pytest.raises(Exception) as exc_info:
-            setup_permissions(mock_sf, "Account", config)
-        assert str(exc_info.value) == "Permission Set Error"
+            setup_permissions(mock_connection, "Account", config)
+        assert str(exc_info.value) == "Error setting up permissions: Permission Set Error"
 
-    def test_process_objects_success(self, mock_sf):
+    def test_process_objects_success(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.PermissionSet.create.return_value = {"success": True, "id": "123"}
+
         objects = ["Account"]
-        config = {
-            "fields": {
-                "read": ["Name"],
-                "edit": ["Status"],
-            }
-        }
+        config = {"fields": {"read": ["Name"], "edit": ["Status"]}}
 
-        with patch("src.main.load_config", return_value=config):
-            process_objects(mock_sf, objects)
+        mock_modules["loader"].return_value = config
+        from src.main import process_objects
 
-        mock_sf.PermissionSet.create.assert_called()
+        process_objects(mock_connection, objects)
+        mock_connection.PermissionSet.create.assert_called()
 
-    def test_process_objects_config_error(self, mock_sf):
+    def test_process_objects_config_error(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
         objects = ["Account", "Invalid"]
 
-        with patch("src.main.load_config", side_effect=FileNotFoundError):
-            process_objects(mock_sf, objects)
+        mock_modules["loader"].side_effect = FileNotFoundError
+        from src.main import process_objects
 
-        mock_sf.PermissionSet.create.assert_not_called()
+        process_objects(mock_connection, objects)
+        mock_connection.PermissionSet.create.assert_not_called()
 
-    def test_main_all_objects(self, mock_sf):
-        with patch("src.main.connect_to_salesforce", return_value=mock_sf), patch(
-            "src.main.load_dotenv"
-        ), patch("sys.argv", ["main.py", "--all"]):
+    def test_main_all_objects(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.describe.return_value = {
+            "sobjects": [{"name": "Account"}, {"name": "Contact"}]
+        }
+        mock_connection.PermissionSet.create.return_value = {"success": True, "id": "123"}
+
+        config = {"fields": {"read": ["Name"], "edit": ["Status"]}}
+
+        mock_modules["loader"].return_value = config
+        with patch("sys.argv", ["main.py", "--all"]):
+            from src.main import main
+
             main()
+            mock_connection.describe.assert_called()
 
-        mock_sf.describe.assert_called()
-
-    def test_main_custom_objects(self, mock_sf):
-        mock_sf.describe.return_value = {
+    def test_main_custom_objects(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.describe.return_value = {
             "sobjects": [
                 {"name": "Account", "custom": False},
                 {"name": "Custom__c", "custom": True},
             ]
         }
-        with patch("src.main.connect_to_salesforce", return_value=mock_sf), patch(
-            "src.main.load_dotenv"
-        ), patch("sys.argv", ["main.py", "--custom-all"]):
+        mock_connection.PermissionSet.create.return_value = {"success": True, "id": "123"}
+
+        config = {"fields": {"read": ["Name"], "edit": ["Status"]}}
+
+        mock_modules["loader"].return_value = config
+        with patch("sys.argv", ["main.py", "--custom-all"]):
+            from src.main import main
+
             main()
+            mock_connection.describe.assert_called()
 
-        mock_sf.describe.assert_called()
+    def test_main_specific_objects(self, mock_modules):
+        mock_connection = mock_modules["sfdc_manager"].connect.return_value.__enter__.return_value
+        mock_connection.PermissionSet.create.return_value = {"success": True, "id": "123"}
 
-    def test_main_specific_objects(self, mock_sf):
-        with patch("src.main.connect_to_salesforce", return_value=mock_sf), patch(
-            "src.main.load_dotenv"
-        ), patch("sys.argv", ["main.py", "--objects", "Account", "Contact"]):
+        config = {"fields": {"read": ["Name"], "edit": ["Status"]}}
+
+        mock_modules["loader"].return_value = config
+        with patch("sys.argv", ["main.py", "--objects", "Account", "Contact"]):
+            from src.main import main
+
             main()
+            mock_connection.PermissionSet.create.assert_called()
 
-        mock_sf.PermissionSet.create.assert_called()
+    def test_main_no_objects(self, mock_modules):
+        with patch("sys.argv", ["main.py"]):
+            from src.main import main
 
-    def test_main_no_objects(self, mock_sf):
-        with patch("src.main.connect_to_salesforce", return_value=mock_sf), patch(
-            "src.main.load_dotenv"
-        ), patch("sys.argv", ["main.py"]):
-            main()
-
-        mock_sf.describe.assert_not_called()
+            with pytest.raises(SystemExit):
+                main()
+            mock_modules["sfdc_manager"].describe.assert_not_called()
